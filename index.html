@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>크라클 오라클 · 온라인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --ink:#161616; --paper:#fffdf8; --wood:#d6b083; --wood2:#c79d6c; --line:#6b6b6b;
+  --muted:#6d5b47; --red:#d8392b; --green:#2f9e5b; --gold:#161616;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;color:var(--ink);font-family:'Gowun Dodum',system-ui,sans-serif}
+body{ /* 나무 테이블 */
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255,240,215,.45), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(120,75,35,.07) 0 2px, transparent 2px 9px, rgba(120,75,35,.05) 9px 10px, transparent 10px 23px),
+    linear-gradient(180deg,var(--wood),var(--wood2));
+  min-height:100vh;
+}
+html{background:var(--wood2)}
+button{font-family:inherit;cursor:pointer;border:none}
+.screen{display:none;position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:14px 14px 40px}
+.screen.on{display:block}
+
+/* ---------- 로고 (상자 뚜껑처럼) ---------- */
+.logo{text-align:center;margin:22px 0 8px}
+.logo .lid{display:inline-block;background:var(--paper);padding:14px 28px 12px;border-radius:10px;box-shadow:0 8px 0 #e6dccb,0 14px 26px rgba(60,35,10,.35);transform:rotate(-1.2deg)}
+.logo h1{font-family:'Gaegu';font-weight:700;font-size:clamp(46px,11vw,82px);margin:0;line-height:1;letter-spacing:1px;color:var(--ink)}
+.logo .sub{color:var(--muted);margin-top:10px;font-size:15px}
+.logo svg{display:block;margin:0 auto -4px}
+
+.panel{background:var(--paper);border-radius:14px;padding:18px;box-shadow:0 4px 0 #e6dccb,0 10px 24px rgba(60,35,10,.28)}
+.home-box{max-width:430px;margin:20px auto 0;display:flex;flex-direction:column;gap:12px}
+input.txt{width:100%;padding:13px 14px;border-radius:10px;border:2px solid #d9cfbf;background:#fff;color:var(--ink);font-size:17px;font-family:inherit;outline:none}
+input.txt:focus{border-color:var(--ink)}
+.btn{padding:13px 16px;border-radius:10px;font-size:17px;font-weight:700;color:#fff;background:var(--ink);box-shadow:0 4px 0 #000;transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #000}
+.btn.ghost{background:#fff;color:var(--ink);box-shadow:0 0 0 2px var(--ink) inset,0 4px 0 #bba98f}
+.btn.ghost:active{box-shadow:0 0 0 2px var(--ink) inset,0 1px 0 #bba98f}
+.btn.pink{background:var(--ink);color:#fff}
+.btn.teal{background:#fff;color:var(--ink);box-shadow:0 0 0 2px var(--ink) inset,0 4px 0 #bba98f}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.warn{background:#fff1ee;border:2px solid var(--red);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5}
+.foot{text-align:center;color:var(--muted);font-size:13px;margin-top:26px}
+
+/* ---------- 로비 ---------- */
+.code{font-family:'Gaegu';font-weight:700;font-size:54px;letter-spacing:10px;color:var(--ink);text-align:center;line-height:1}
+.plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:12px 0}
+.pchip{background:#f4eee3;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:16px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green);flex:none}
+.dot.off{background:#aaa}
+.seg{display:flex;border:2px solid var(--ink);border-radius:10px;overflow:hidden}
+.seg button{flex:1;padding:11px;background:#fff;color:var(--ink);font-size:15px;font-family:'Gaegu';font-weight:700;font-size:19px}
+.seg button[data-d="hard"]{background:#fff;color:var(--ink)}
+.seg button.on[data-d="easy"]{background:#fff;box-shadow:inset 0 -5px 0 var(--ink)}
+.seg button.on[data-d="hard"]{background:var(--ink);color:#fff}
+.lbl{color:var(--muted);font-size:14px;margin:12px 0 6px}
+
+/* ---------- 게임 헤더 ---------- */
+.hud{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pill{background:var(--paper);color:var(--ink);padding:7px 12px;border-radius:999px;font-size:14px;white-space:nowrap;box-shadow:0 2px 0 #bba98f}
+.pill b{color:var(--ink)}
+.spacer{flex:1}
+.errs{display:flex;gap:3px;align-items:center}
+.errs i{width:13px;height:18px;border-radius:2px;background:#fff;border:1.5px solid #bbb;display:block}
+.errs i.f{background:var(--ink);border-color:var(--ink)}
+.errs i.lim{border:1.5px dashed var(--red)}
+.banner{text-align:center;font-family:'Gaegu';font-weight:700;font-size:30px;margin:4px 0 10px;color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.banner small{display:block;font-family:'Gowun Dodum';font-weight:400;font-size:14px;color:#4b3a28;margin-top:2px;text-shadow:none}
+
+/* ---------- 오라클 카드: 흰 칸(쉬운) + 검은 칸(어려운) ---------- */
+.ocard{width:126px;height:88px;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 0 0 1.5px #1a1a1a,0 4px 8px rgba(60,35,10,.35);
+  display:flex;flex-direction:column;position:relative;transition:transform .25s, box-shadow .2s;user-select:none}
+.ocard .e,.ocard .h{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px 6px;font-family:'Gaegu';font-weight:700;line-height:1.05}
+.ocard .e{background:#fff;color:#111;font-size:21px}
+.ocard .h{background:#111;color:#fff;font-size:19px}
+.ocard.d-easy .h{font-size:12px;flex:.55;color:#777}
+.ocard.d-hard .e{font-size:12px;flex:.55;color:#aaa}
+.ocard.big{width:168px;height:116px}
+.ocard.big .e{font-size:28px}.ocard.big .h{font-size:25px}
+.ocard.big.d-easy .h,.ocard.big.d-hard .e{font-size:14px}
+.ocard.back{background:#e9e3d6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80'%3E%3Cpath d='M8 60 C30 10,50 70,70 35 S110 5,112 55 M20 20 C40 30,30 55,58 62' fill='none' stroke='%23999' stroke-width='3' stroke-dasharray='0 7' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100%;box-shadow:0 0 0 1.5px #1a1a1a,0 2px 3px rgba(60,35,10,.3)}
+.ocard.back > *{visibility:hidden}
+.ocard.pick{cursor:pointer}
+.ocard.pick:hover{transform:translateY(-4px)}
+.ocard.sel{transform:translateY(-6px) rotate(-2deg);box-shadow:0 0 0 4px var(--red),0 10px 18px rgba(60,35,10,.45)}
+.cgrid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;padding:6px}
+.cwrap{display:flex;flex-direction:column;align-items:center;gap:5px}
+.ctag{font-size:12.5px;padding:3px 8px;border-radius:6px;background:var(--paper);color:var(--ink);max-width:150px;text-align:center}
+.ctag.ok{background:var(--green);color:#fff}
+.ctag.bad{background:var(--red);color:#fff}
+.ctag.dim{opacity:.8}
+.ocard.err{box-shadow:0 0 0 4px var(--red),0 4px 8px rgba(60,35,10,.35)}
+.ocard.good{box-shadow:0 0 0 4px var(--green),0 4px 8px rgba(60,35,10,.35)}
+.myhand{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* ---------- 크라클 보드 (흰 코팅 보드 + 검은 마커) ---------- */
+.drawwrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.boardframe{position:relative;padding:0 0 30px;background:transparent}
+.vp{border-radius:10px;overflow:hidden;background:#f7f7f8;border:14px solid #1d1f1e;border-radius:22px;box-sizing:content-box;
+  box-shadow:0 2px 0 #000,0 12px 26px rgba(60,35,10,.4)}
+.gitem .vp{overflow:visible;box-shadow:none;background:none;border:0}
+.eraseRing{position:absolute;display:none;border:2px solid #d8392b;border-radius:50%;background:rgba(216,57,43,.08);pointer-events:none;z-index:3}
+.boardframe.panning .vp{box-shadow:0 0 0 3px var(--ink),0 12px 26px rgba(60,35,10,.35)}
+.zbadge{position:absolute;right:10px;top:10px;background:rgba(22,22,22,.78);color:#fff;font-size:12px;padding:3px 8px;border-radius:999px;pointer-events:none;z-index:3}
+.esize{display:inline-flex;align-items:center;gap:8px;background:var(--paper);border-radius:10px;padding:6px 12px;font-size:14px;box-shadow:0 2px 0 #bba98f}
+.esize input{width:150px;accent-color:#d8392b}
+.esize b{min-width:26px;text-align:right}
+.boardframe canvas{display:block;border-radius:8px;touch-action:none;background:#f7f7f8}
+.boardframe > canvas{border:8px solid #1d1f1e;border-radius:12px;box-shadow:0 1px 0 #000,0 8px 18px rgba(60,35,10,.4)}
+.penmark{position:absolute;left:50%;bottom:6px;transform:translateX(-50%) rotate(-1deg);width:150px;height:18px;border-radius:4px 9px 9px 4px;
+  background:linear-gradient(90deg,#141414 0 12%,#2a2a2a 12% 14%,#141414 14% 30%,#fafafa 30% 90%,#1a1a1a 90%);
+  box-shadow:0 3px 4px rgba(0,0,0,.35)}
+.penmark::after{content:"";position:absolute;right:-9px;top:5px;width:10px;height:8px;background:#111;border-radius:0 5px 5px 0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.tool{background:var(--paper);color:var(--ink);border-radius:10px;padding:10px 13px;font-size:15px;border:2px solid transparent;box-shadow:0 2px 0 #bba98f}
+.tool.on{border-color:var(--ink)}
+.timer{position:relative;width:62px;height:62px;flex:none;background:var(--paper);border-radius:50%;box-shadow:0 3px 0 #bba98f}
+.timer svg{transform:rotate(-90deg)}
+.timer span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px}
+.timer.hurry span{color:var(--red)}
+.drawtop{display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+.hint{color:#4b3a28;font-size:13px;text-align:center}
+
+/* 갤러리 */
+.gallery{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin:8px 0 18px}
+.gitem{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:zoom-in}
+.gitem .boardframe{padding-bottom:18px}
+.gitem .penmark{width:80px;height:10px;bottom:3px}
+.gitem .penmark::after{right:-5px;top:3px;width:6px;height:4px}
+@keyframes flipB{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
+.boardframe.flipping{animation:flipB .45s ease}
+.passnote{display:inline-block;background:var(--paper);border-radius:999px;padding:4px 12px;margin-top:6px;font-family:'Gowun Dodum';font-size:14px;color:var(--ink);box-shadow:0 2px 0 #bba98f}
+.gname{font-size:14px;background:var(--paper);padding:3px 10px;border-radius:999px}
+.gname.turn{background:var(--ink);color:#fff}
+.gwords{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+
+.modal{position:fixed;inset:0;background:rgba(40,25,10,.6);z-index:50;display:none;align-items:center;justify-content:center;padding:14px}
+.modal.on{display:flex}
+.modal .inner{max-width:760px;width:100%;max-height:92vh;overflow:auto}
+.modal .banner{color:var(--ink)}
+.rules h3{font-family:'Gaegu';font-size:26px;margin:14px 0 4px;color:var(--ink)}
+.rules p,.rules li{line-height:1.6;font-size:15px}
+.rules ul{padding-left:20px;margin:4px 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-weight:700;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.toast.on{opacity:1}
+.center{text-align:center}
+.bigres{font-family:'Gaegu';font-weight:700;font-size:clamp(38px,9vw,64px);text-align:center;margin:16px 0 4px}
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+.actions .btn{min-width:170px}
+</style>
+</head>
+<body>
+
+<!-- ============ 홈 ============ -->
+<section id="home" class="screen on">
+  <div class="logo"><div class="lid">
+    <svg width="220" height="70" viewBox="0 0 220 70" aria-hidden="true">
+      <path d="M10 50 C 40 5, 70 65, 100 30 S 150 -5, 170 40 S 205 60, 212 20" fill="none" stroke="#777" stroke-width="3.5" stroke-dasharray="0 9" stroke-linecap="round"/>
+      <path d="M100 30 C 115 12, 140 8, 150 22" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round"/>
+      
+    </svg>
+    <h1>크라클 오라클</h1>
+    <div class="sub">점선 속에 숨은 그림을 찾아라 · 협력 그림 게임 (2~8인)</div>
+  </div></div>
+  <div class="panel home-box">
+    <div id="cfgWarn" class="warn" style="display:none">⚠️ firebaseConfig가 아직 비어 있어요. 코드 위쪽 <b>firebaseConfig</b>에 내 프로젝트 값을 붙여 넣으면 온라인 플레이가 켜져요. (지금은 ‘혼자 그려보기’만 가능)</div>
+    <input id="nameIn" class="txt" maxlength="10" placeholder="닉네임 (최대 10자)">
+    <button class="btn" id="btnCreate">방 만들기</button>
+    <div class="row">
+      <input id="codeIn" class="txt" maxlength="4" placeholder="방 코드" style="text-transform:uppercase;text-align:center;letter-spacing:4px">
+      <button class="btn teal" id="btnJoin">참가하기</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="btnPractice">✏️ 혼자 그려보기</button>
+      <button class="btn ghost" id="btnRules">📜 규칙</button>
+    </div>
+  </div>
+  <div class="foot">made by m00n</div>
+</section>
+
+<!-- ============ 로비 ============ -->
+<section id="lobby" class="screen">
+  <div class="logo" style="margin-top:6px"><div class="lid"><h1 style="font-size:44px">크라클 오라클</h1></div></div>
+  <div class="panel" style="max-width:620px;margin:10px auto">
+    <div class="center" style="color:var(--muted)">방 코드</div>
+    <div class="code" id="lobCode">----</div>
+    <div class="actions" style="margin:8px 0"><button class="btn ghost" id="btnCopy" style="min-width:0">🔗 초대 링크 복사</button></div>
+    <div class="lbl">참가자 <span id="lobCount"></span></div>
+    <div class="plist" id="lobPlayers"></div>
+    <div class="lbl">단어 난이도 (방장이 정해요)</div>
+    <div class="seg" id="diffSeg">
+      <button data-d="easy">쉬운 단어 (흰 칸)</button>
+      <button data-d="hard">어려운 단어 (검은 칸)</button>
+    </div>
+    <div class="hint" style="margin-top:8px">처음이라면 쉬운 단어를 추천해요 · 2~3명이면 각자 단어 2개를 한 보드에 그려요</div>
+    <div class="actions">
+      <button class="btn pink" id="btnStart">게임 시작</button>
+      <button class="btn ghost" id="btnLeave">나가기</button>
+    </div>
+    <div class="hint" id="lobHint"></div>
+  </div>
+</section>
+
+<!-- ============ 게임 ============ -->
+<section id="game" class="screen">
+  <div class="hud" id="hud"></div>
+  <div id="stage"></div>
+</section>
+
+<!-- ============ 혼자 그려보기 ============ -->
+<section id="practice" class="screen">
+  <div class="hud">
+    <button class="btn ghost" id="pBack" style="padding:8px 14px;font-size:15px">← 처음으로</button>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="pNew" style="padding:8px 14px;font-size:15px">🔄 새 보드·새 단어</button>
+  </div>
+  <div class="drawtop"><div id="pCard"></div><div class="timer" id="pTimer"></div></div>
+  <div id="pStage"></div>
+</section>
+
+<div class="modal" id="modal"><div class="inner panel" id="modalInner"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   🔥 Firebase 설정 — 내 프로젝트 값으로 바꿔 주세요
+   (Firebase 콘솔 → 프로젝트 설정 → 내 앱 → SDK 구성)
+   Realtime Database를 만들어 두어야 해요.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyC-wSMVdNwWppxVAFTAuO6A5MtFXceAK0U",
+  authDomain: "krakel-orakel.firebaseapp.com",
+  databaseURL: "https://krakel-orakel-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "krakel-orakel",
+  storageBucket: "krakel-orakel.firebasestorage.app",
+  messagingSenderId: "137680179279",
+  appId: "1:137680179279:web:4fdb54f50dc46f4020da3a"
+};
+
+/* =========================================================
+   단어 카드 — 카드 한 장 = 위(쉬운 단어) + 아래(어려운 단어)
+   ========================================================= */
+const EASY = `고양이 강아지 토끼 코끼리 기린 거북이 달팽이 물고기 문어 상어 고래 나비 거미 오리 닭 뱀 사자 곰 원숭이 펭귄
+부엉이 개구리 공룡 사과 바나나 포도 수박 딸기 당근 버섯 아이스크림 케이크 피자 햄버거 도넛 컵 우산 모자 안경 신발
+양말 가방 시계 열쇠 자전거 자동차 버스 기차 비행기 배 로켓 헬리콥터 집 성 다리 탑 나무 꽃 해 달
+별 구름 비 번개 무지개 눈사람 산 바다 섬 화산 연필 가위 책 편지 선물 풍선 왕관 칼 방패 망치
+사다리 의자 침대 전구 촛불 텔레비전 전화기 카메라 기타 피아노 북 트로피 축구공 연 로봇 유령 외계인 해적 마녀 천사
+입술 손 발 하트 다이아몬드 닻 텐트 모래시계 거울 빗자루 칫솔 병 라면 김밥 붕어빵 등대 풍차 문 창문 계단
+지렁이 해파리 불가사리 조개 새우 게 돌고래 말 소 돼지 양 염소 여우 늑대 다람쥐 쥐 박쥐 앵무새 공작 백조`.split(/\s+/);
+const HARD = `월요일 아침|첫사랑|숙제|잔소리|소풍|생일 파티|꿈|비밀|행운|질투|용기|우정|휴가|소나기|지각|낮잠|방학|시험|급식|줄다리기|
+숨바꼭질|보물찾기|마술|여행|이사|대청소|산책|캠핑|요리|낚시|등산|수영|춤|노래방|영화관|병원|도서관|놀이공원|동물원|사막|
+정글|우주|북극|심해|교통 체증|정전|태풍|지진|불꽃놀이|크리스마스|할로윈|설날|결혼식|졸업|입학|알람|와이파이|배터리 부족|셀카|택배|
+줄서기|새치기|재채기|딸꾹질|하품|코골이|간지럼|두근두근|깜짝 파티|거짓말|약속|기다림|외로움|자유|평화|시간|중력|메아리|그림자|소음|
+냄새|속도|균형|미로|퍼즐|도미노|자석|거품|롤러코스터|회전목마|시소|미끄럼틀|그네|트램펄린|눈싸움|물총 놀이|박수|악수|포옹|윙크|
+하이파이브|줄넘기|달리기|번지 점프|스카이다이빙|서핑|타임머신|순간이동|투명 인간|초능력|마법 양탄자|소원|보물 지도|해적선|무인도|오아시스|신기루|블랙홀|유성우|일식|
+배고픔|졸음|감기|화해|응원|비눗방울|종이비행기|모닥불|피크닉|야구`.split('|').map(s=>s.trim()).filter(Boolean);
+const NCARDS = Math.min(EASY.length, HARD.length);
+
+/* =========================================================
+   기본 유틸
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('on'),2200)}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));window.scrollTo(0,0)}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function modal(html){$('#modalInner').innerHTML=html;$('#modal').classList.add('on')}
+function closeModal(){$('#modal').classList.remove('on')}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+function cardHTML(i, diff, extra=''){
+  return `<div class="ocard d-${diff} ${extra}" data-i="${i}"><div class="e">${esc(EASY[i])}</div><div class="h">${esc(HARD[i])}</div></div>`;
+}
+const wordOf = (i,diff) => diff==='hard'?HARD[i]:EASY[i];
+
+/* =========================================================
+   낙서 보드 — 시드로 같은 점선 그림을 모든 기기에서 똑같이 생성
+   ========================================================= */
+const BW=1200, BH=840, SP=7, CELL=24;   // 원작 보드 비율 약 10:7
+const boardCache = new Map();
+function genBoard(seed){
+  if(boardCache.has(seed)) return boardCache.get(seed);
+  const R = rng(seed), raw = [], PAD = 40;
+  const inside=(x,y,m)=>x>-m&&x<BW+m&&y>-m&&y<BH+m;
+  // 한 점에서 양쪽으로 보드 밖까지 이어지는 선 (heading: 거리 t → 진행 방향). 진행 방향이 기준에서 90° 미만으로만 흔들려 원을 만들지 않음
+  function build(x0,y0,heading){
+    const go=dir=>{const out=[];let x=x0,y=y0;for(let t=0;t<8000;t+=3){const h=heading(dir*t);x+=dir*Math.cos(h)*3;y+=dir*Math.sin(h)*3;out.push(x,y);if(!inside(x,y,PAD))break}return out};
+    const f=go(1), bw=go(-1), p=[];
+    for(let i=bw.length-2;i>=0;i-=2) p.push(bw[i],bw[i+1]);
+    p.push(x0,y0); for(const v of f) p.push(v);
+    raw.push({p,closed:false});
+  }
+  const gauss=()=>(R()+R()+R()+R()-2)*0.87;
+  // 손으로 그은 듯한 선: 휘는 정도(곡률)가 불규칙하게 천천히 변함 — 규칙적인 반복 무늬 없음.
+  // 기준 방향에서 너무 벗어나면 부드럽게 되돌아오게 해서 동그랗게 말리지 않고 결국 보드 밖으로 나감.
+  function natural(x0,y0,o){
+    const a0=R()*Math.PI*2;
+    const go=base=>{const out=[];let x=x0,y=y0,h=(R()-.5)*0.4,c=0;
+      for(let t=0;t<9000;t+=3){
+        c += gauss()*o.sig; c *= o.damp;
+        if(R()<o.spike) c += (R()-.5)*o.kick;                   // 가끔 손이 휙 꺾이는 느낌
+        if(Math.abs(h)>o.soft) c -= Math.sign(h)*o.pull;        // 너무 틀어지면 되돌아오기
+        h += c; if(Math.abs(h)>1.4){h=Math.sign(h)*1.4; c*=-0.3}
+        x+=Math.cos(base+h)*3; y+=Math.sin(base+h)*3; out.push(x,y);
+        if(!inside(x,y,PAD)) break;
+      } return out};
+    const f=go(a0), bw=go(a0+Math.PI), p=[];
+    for(let i=bw.length-2;i>=0;i-=2) p.push(bw[i],bw[i+1]);
+    p.push(x0,y0); for(const v of f) p.push(v);
+    raw.push({p,closed:false});
+  }
+  // ① 각진 선: 곧게 가다가 불규칙하게 꺾임 (원작 사진 1번 판)
+  function angular(x,y){
+    const a0=R()*Math.PI*2, segs=[]; let t=-4000, h=0;
+    while(t<4000){ const len=40+R()*R()*320; let nh=h+(R()<.5?-1:1)*(0.15+R()*0.95); if(Math.abs(nh)>1.35) nh=h-(nh-h); nh=Math.max(-1.35,Math.min(1.35,nh));
+      segs.push([t,t+len,h+gauss()*0.04]); t+=len; h=nh; }
+    const soft=R()<0.4;   // 일부는 꺾이는 곳이 살짝 둥글게
+    build(x,y,tt=>{ for(let i=0;i<segs.length;i++){const [s0,s1,hh]=segs[i]; if(tt<s1){
+        if(soft && i>0 && tt-s0<22){const ph=segs[i-1][2];return a0+ph+(hh-ph)*((tt-s0)/22)} return a0+hh;}} return a0; });
+  }
+  // ② 크게 휘는 긴 곡선
+  function sweep(x,y){ natural(x,y,{sig:0.0022+R()*0.002, damp:0.992, spike:0.0015, kick:0.12, soft:0.9, pull:0.0012}); }
+  // ③ 자잘하게 구불거리는 낙서 선 (불규칙)
+  function meander(x,y){ natural(x,y,{sig:0.007+R()*0.006, damp:0.965, spike:0.006, kick:0.3, soft:0.75, pull:0.004}); }
+  const STY=[angular,sweep,meander];
+  const main=Math.floor(R()*3), dens=R();
+  const nLine = [11,9,10][main] + Math.round(dens*[12,16,14][main]);   // 판마다 빽빽함 다름
+  const pick=()=> R()<0.8 ? STY[main] : STY[Math.floor(R()*3)];     // 한 판은 주로 한 가지 스타일
+  for(let k=0;k<nLine;k++) pick()(30+R()*(BW-60), 30+R()*(BH-60));
+  // 빈 곳 메우기 — 9×7 칸 중 선이 거의 없는 칸을 지나는 선 추가
+  const GX=9, GY=7, occ=new Uint16Array(GX*GY);
+  const markOcc=p=>{for(let i=0;i<p.length;i+=2){const gx=Math.floor(p[i]/BW*GX),gy=Math.floor(p[i+1]/BH*GY);if(gx>=0&&gx<GX&&gy>=0&&gy<GY)occ[gy*GX+gx]++}};
+  raw.forEach(r=>markOcc(r.p));
+  for(let gi=0;gi<GX*GY;gi++){
+    if(occ[gi]>=4) continue;
+    STY[main]((gi%GX+0.25+R()*0.5)*BW/GX, (Math.floor(gi/GX)+0.25+R()*0.5)*BH/GY);
+    markOcc(raw[raw.length-1].p);
+  }
+  // 보드 경계에서 자르기 — 밖으로 나간 부분만 잘라 내므로 선 끝은 항상 보드 테두리에 닿음
+  const strokes=[], closed=[];
+  raw.forEach(({p,closed:cl})=>{
+    const n=p.length/2;
+    let allIn=true; for(let i=0;i<n;i++) if(!inside(p[i*2],p[i*2+1],6)){allIn=false;break}
+    if(cl && allIn){ strokes.push(resample(p.concat([p[0],p[1]]))); closed.push(true); return; }
+    let start=0; if(cl){ for(let i=0;i<n;i++) if(!inside(p[i*2],p[i*2+1],6)){start=i;break} }
+    const len = cl ? n+1 : n; let cur=[];
+    for(let k=0;k<len;k++){
+      const i=(start+k)%n, x=p[i*2], y=p[i*2+1];
+      if(inside(x,y,6)) cur.push(x,y);
+      else { if(cur.length>=8){strokes.push(resample(cur));closed.push(false)} cur=[]; }
+    }
+    if(cur.length>=8){strokes.push(resample(cur));closed.push(false)}
+  });
+  const keep=strokes.map((s,i)=>i).filter(i=>strokes[i].length>=6);
+  const S2=keep.map(i=>strokes[i]), C2=keep.map(i=>closed[i]);
+  const grid = new Map();
+  S2.forEach((s,si)=>{for(let i=0;i<s.length/2;i++){
+    const key=Math.floor(s[i*2]/CELL)+','+Math.floor(s[i*2+1]/CELL);
+    let b=grid.get(key); if(!b)grid.set(key,b=[]); b.push(si,i);
+  }});
+  const B = {seed, strokes:S2, closed:C2, grid};
+  boardCache.set(seed,B); return B;
+}
+function resample(p){
+  const out=[p[0],p[1]]; let px=p[0],py=p[1],acc=0;
+  for(let i=2;i<p.length;i+=2){
+    let x=p[i],y=p[i+1],dx=x-px,dy=y-py,d=Math.hypot(dx,dy);
+    while(acc+d>=SP){const t=(SP-acc)/d;px=px+dx*t;py=py+dy*t;out.push(px,py);dx=x-px;dy=y-py;d=Math.hypot(dx,dy);acc=0}
+    acc+=d;px=x;py=y;
+  }
+  return new Float32Array(out);
+}
+function emptyInk(B){return B.strokes.map(s=>new Uint8Array(s.length/2))}
+function nearby(B,x,y,r,cb){
+  const c0=Math.floor((x-r)/CELL),c1=Math.floor((x+r)/CELL),r0=Math.floor((y-r)/CELL),r1=Math.floor((y+r)/CELL),rr=r*r;
+  for(let cx=c0;cx<=c1;cx++)for(let cy=r0;cy<=r1;cy++){
+    const b=B.grid.get(cx+','+cy); if(!b)continue;
+    for(let k=0;k<b.length;k+=2){const s=B.strokes[b[k]],i=b[k+1],dx=s[i*2]-x,dy=s[i*2+1]-y;if(dx*dx+dy*dy<=rr)cb(b[k],i)}
+  }
+}
+// 잉크 ↔ 문자열 (구간 압축)
+function encInk(ink){return ink.map(a=>{const r=[];for(let i=0;i<a.length;i++){if(a[i]){let j=i;while(j+1<a.length&&a[j+1])j++;r.push(i+'.'+(j-i+1));i=j}}return r.join(',')}).join('|')}
+function decInk(B,str){const ink=emptyInk(B);if(!str)return ink;str.split('|').forEach((part,si)=>{if(!part||!ink[si])return;part.split(',').forEach(run=>{const[a,n]=run.split('.').map(Number);for(let k=0;k<n;k++)if(a+k<ink[si].length)ink[si][a+k]=1})});return ink}
+const inkCount = ink => ink.reduce((t,a)=>t+a.reduce((u,v)=>u+v,0),0);
+
+// 회전: 0,1(90°),2,3 — 펜(마커)이 놓인 쪽이 그림의 아래
+const viewSize = rot => rot%2 ? [BH,BW] : [BW,BH];
+function applyRot(ctx,rot){
+  if(rot===1){ctx.translate(BH,0);ctx.rotate(Math.PI/2)}
+  else if(rot===2){ctx.translate(BW,BH);ctx.rotate(Math.PI)}
+  else if(rot===3){ctx.translate(0,BW);ctx.rotate(-Math.PI/2)}
+}
+function viewToBoard(rot,vx,vy){
+  if(rot===1) return [vy, BH-vx];
+  if(rot===2) return [BW-vx, BH-vy];
+  if(rot===3) return [BW-vy, vx];
+  return [vx,vy];
+}
+function paintBoard(cv,B,ink,rot){
+  const [vw]=viewSize(rot), ctx=cv.getContext('2d'), s=cv.width/vw;
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#f7f7f8'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(s,0,0,s,0,0); applyRot(ctx,rot);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  // 점선
+  const lw=Math.max(7,1.7/s); ctx.strokeStyle='#6e6e6e'; ctx.lineWidth=lw; ctx.setLineDash([0,Math.max(12.5,lw*2.1)]);
+  B.strokes.forEach((p,si)=>{ctx.beginPath();ctx.moveTo(p[0],p[1]);for(let i=2;i<p.length;i+=2)ctx.lineTo(p[i],p[i+1]);if(B.closed[si])ctx.lineTo(p[0],p[1]);ctx.stroke()});
+  ctx.setLineDash([]);
+  if(!ink) return;
+  // 마커 잉크 (점선 위에만)
+  ctx.strokeStyle='#111'; ctx.lineWidth=11;
+  ctx.beginPath();
+  B.strokes.forEach((p,si)=>{const a=ink[si];let open=false;
+    for(let i=0;i<a.length;i++){
+      if(a[i]&&a[i+1]){ if(!open){ctx.moveTo(p[i*2],p[i*2+1]);open=true} ctx.lineTo(p[i*2+2],p[i*2+3]); }
+      else open=false;
+    }
+    const L=a.length; if(B.closed[si]&&a[L-1]&&a[0]){ctx.moveTo(p[L*2-2],p[L*2-1]);ctx.lineTo(p[0],p[1])}
+  });
+  ctx.stroke();
+}
+function sizeCanvas(cv,rot,cssW){
+  const [vw,vh]=viewSize(rot), dpr=Math.min(2,window.devicePixelRatio||1);
+  const cssH=cssW*vh/vw; cv.style.width=cssW+'px'; cv.style.height=cssH+'px';
+  cv.width=Math.round(cssW*dpr); cv.height=Math.round(cssH*dpr);
+}
+function boardThumb(B,ink,rot,cssW){
+  const f=document.createElement('div'); f.className='boardframe';
+  const cv=document.createElement('canvas'); sizeCanvas(cv,rot,cssW); paintBoard(cv,B,ink,rot);
+  f.appendChild(cv); const pm=document.createElement('div'); pm.className='penmark'; f.appendChild(pm);
+  return f;
+}
+
+/* ---------- 그리기 컴포넌트 ---------- */
+
+function mountDraw(host,boards,opts={}){
+  if(!Array.isArray(boards)) boards=[boards];
+  let side=Math.min(opts.side||0,boards.length-1), B=boards[side];
+  host.innerHTML=`<div class="drawwrap">
+    <div class="boardframe"><div class="vp"><canvas></canvas></div><div class="eraseRing"></div><div class="zbadge"></div><div class="penmark" title="마커가 놓인 쪽이 그림의 아래예요"></div></div>
+    <div class="tools">
+      <button class="tool on" data-t="pen">✏️ 마커</button>
+      <button class="tool" data-t="erase">🧽 지우개</button>
+      <label class="esize" style="display:none">지우개 크기
+        <input type="range" class="erange" min="6" max="120" step="1" value="30"><b class="eval">30</b></label>
+      <button class="tool" data-t="pan" style="display:none">✋ 이동</button>
+      <button class="tool" data-a="zin">🔍＋</button>
+      <button class="tool" data-a="zout">🔍－</button>
+      <button class="tool" data-a="undo">↶ 되돌리기</button>
+      <button class="tool" data-a="rot">⟳ 돌리기</button>
+      ${boards.length>1?'<button class="tool" data-a="flip">🔄 뒤집기 <b class="sideLbl"></b></button>':''}
+      <button class="tool" data-a="clear">🗑 전부 지우기</button>
+    </div>
+    <div class="hint">점선 위에만 그려져요 · 한 번 누른 채로는 처음 잡은 선 하나만 칠해져요 · 글자·숫자 금지 · 마커가 있는 쪽이 그림의 아래</div>
+  </div>`;
+  const cv=host.querySelector('canvas'), vp=host.querySelector('.vp'), frame=host.querySelector('.boardframe'), ring=host.querySelector('.eraseRing');
+  const zb=host.querySelector('.zbadge'), panBtn=host.querySelector('[data-t="pan"]'), esz=host.querySelector('.esize');
+  const st={ink:emptyInk(B),rot:0,tool:'pen',locked:false,undo:[],dirty:false,side,inks:[],zoom:1,esize:30};
+  if(opts.ink) st.ink=opts.ink; if(opts.rot!=null) st.rot=opts.rot;
+  const sideLbl=()=>{const e=host.querySelector('.sideLbl'); if(e) e.textContent=st.side?'(지금 뒷면)':'(지금 앞면)'};
+  const ZMIN=1, ZMAX=4;
+  let baseW=0;
+  // anchor: {fx,fy (캔버스에서 기준점의 비율), ox,oy (화면 안 기준점 위치)} — 마우스 위치를 기준으로 확대
+  function fit(keep,anchor){
+    const maxW=Math.min(host.clientWidth-4, 980);
+    const top=host.getBoundingClientRect().top;
+    const maxH=Math.max(260, window.innerHeight-top-150);
+    const [vw,vh]=viewSize(st.rot);
+    baseW=Math.max(220, Math.min(maxW, maxH*vw/vh));
+    const baseH=baseW*vh/vw;
+    // 확대 전 화면 가운데 위치 기억
+    const A = anchor || {fx: keep ? (vp.scrollLeft+vp.clientWidth/2)/Math.max(1,cv.clientWidth) : .5,
+                         fy: keep ? (vp.scrollTop+vp.clientHeight/2)/Math.max(1,cv.clientHeight) : .5, ox:null, oy:null};
+    vp.style.width=baseW+'px'; vp.style.height=baseH+'px';
+    const W=baseW*st.zoom, H=baseH*st.zoom;
+    const dpr=Math.min(2,window.devicePixelRatio||1, 4200/W);
+    cv.style.width=W+'px'; cv.style.height=H+'px'; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+    vp.scrollLeft=A.fx*W-(A.ox==null?baseW/2:A.ox); vp.scrollTop=A.fy*H-(A.oy==null?baseH/2:A.oy);
+    panBtn.style.display=st.zoom>1?'':'none';
+    zb.textContent=Math.round(st.zoom*100)+'%'; zb.style.display=st.zoom>1?'':'none';
+    if(st.zoom===1 && st.tool==='pan') setTool('pen');
+    redraw();
+  }
+  let raf=0; function redraw(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>paintBoard(cv,B,st.ink,st.rot))}
+  function snap(){st.undo.push(st.ink.map(a=>a.slice()));if(st.undo.length>40)st.undo.shift()}
+  function setTool(t){st.tool=t;host.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+    esz.style.display=t==='erase'?'':'none'; cv.style.cursor=t==='pan'?'grab':(t==='erase'?'none':'crosshair'); if(t!=='erase')ring.style.display='none'}
+  function nearest(x,y,r){let best=null,bd=r*r;
+    nearby(B,x,y,r,(si,i)=>{const s=B.strokes[si],dx=s[i*2]-x,dy=s[i*2+1]-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best={si,i}}});return best}
+  // 잡은 선 위에서만, 직전 위치 앞뒤 W칸 안에서 커서와 가장 가까운 점
+  function follow(x,y,W=7){
+    const s=B.strokes[cur.si],n=s.length/2,cl=B.closed[cur.si];let bj=-1,bk=0,bd=1e9;
+    for(let k=-W;k<=W;k++){let j=cur.i+k; if(cl) j=(j+n)%n; else if(j<0||j>=n) continue;
+      const dx=s[j*2]-x,dy=s[j*2+1]-y,d=dx*dx+dy*dy;if(d<bd){bd=d;bj=j;bk=k}}
+    return {j:bj,k:bk,d:Math.sqrt(bd)};
+  }
+  let cur=null;
+  function paintRange(si,a,k,v){const n=st.ink[si].length,dir=k<0?-1:1;for(let t=0;t<=Math.abs(k);t++){st.ink[si][((a+dir*t)%n+n)%n]=v}}
+  const unit=()=>{const [vw]=viewSize(st.rot);return vw/Math.max(1,cv.getBoundingClientRect().width)}; // 화면 1px = 보드 몇 단위
+  const pickR=()=>Math.max(8,16*unit());        // 처음 잡을 때: 화면 16px 안의 가장 가까운 선
+  const tolR =()=>Math.max(14,22*unit());       // 따라갈 때: 화면 22px까지 벗어나도 계속
+  // 누른 곳 근처 후보 선들(선마다 가장 가까운 점)
+  function candidates(x,y,r){const m=new Map();
+    nearby(B,x,y,r,(si,i)=>{const s=B.strokes[si],d=Math.hypot(s[i*2]-x,s[i*2+1]-y);const c=m.get(si);if(!c||d<c.d)m.set(si,{si,i,d})});
+    return [...m.values()]}
+  let pend=null;   // 교차점에서 시작하면 조금 움직인 방향을 보고 선을 고름
+  function choose(x,y){
+    let best=null;
+    const vx=x-pend.x, vy=y-pend.y, vl=Math.hypot(vx,vy)||1, tol=tolR();
+    for(const c of pend.c){
+      const s=B.strokes[c.si], n=s.length/2, cl=B.closed[c.si];
+      const a=cl?(c.i-2+n)%n:Math.max(0,c.i-2), b=cl?(c.i+2)%n:Math.min(n-1,c.i+2);
+      const tx=s[b*2]-s[a*2], ty=s[b*2+1]-s[a*2+1], tl=Math.hypot(tx,ty)||1;
+      const cos=Math.abs((vx*tx+vy*ty)/(vl*tl));           // 움직인 방향과 선 방향이 얼마나 나란한지
+      cur=c; const f=follow(x,y,45);
+      const sc=f.d/tol + (1-cos)*2.5 + c.d/tol*0.5;
+      if(!best||sc<best.sc)best={c,sc}}
+    cur=best.c; pend=null;
+  }
+  // 선의 i번째 점에서의 방향
+  function tangent(si,i){const s=B.strokes[si],n=s.length/2,cl=B.closed[si];
+    const a=cl?(i-2+n)%n:Math.max(0,i-2), b=cl?(i+2)%n:Math.min(n-1,i+2);
+    const tx=s[b*2]-s[a*2], ty=s[b*2+1]-s[a*2+1], l=Math.hypot(tx,ty)||1; return [tx/l,ty/l]}
+  let lp=null, trail=[];          // lp: 마지막으로 칠한 커서 위치, trail: 최근 커서 경로(움직이는 방향 계산용)
+  function motion(x,y){ trail.push([x,y]); if(trail.length>12) trail.shift();
+    const o=trail[0], vx=x-o[0], vy=y-o[1], l=Math.hypot(vx,vy); return l>4? [vx/l,vy/l,l] : null }
+  function paintTo(x,y,f){ paintRange(cur.si,cur.i,f.k,1); cur.i=f.j; st.dirty=true; lp=[x,y]; }
+  function penMark(x,y){
+    if(!cur && !pend){
+      const c=candidates(x,y,pickR()); trail=[[x,y]]; if(!c.length) return;
+      if(c.length===1){cur=c[0];st.ink[cur.si][cur.i]=1;st.dirty=true;lp=[x,y];return}
+      pend={c,x,y}; return;
+    }
+    const mv=motion(x,y);
+    if(pend){ if(Math.hypot(x-pend.x,y-pend.y) < 12*unit()+6) return; lp=[pend.x,pend.y]; choose(x,y); st.ink[cur.si][cur.i]=1; }
+    const tol=tolR(), near=Math.max(6,8*unit());
+    // 커서가 실제로 움직인 거리만큼만 선을 따라 칠함 → 손이 안 간 먼 곳까지 칠해지지 않음
+    const moved=lp?Math.hypot(x-lp[0],y-lp[1]):0;
+    const W=Math.max(3,Math.min(45,Math.ceil((moved*1.4+8)/SP)));
+    const f=follow(x,y,W);
+    if(f.d<=near){ paintTo(x,y,f); return; }
+    // 지금 선에서 벗어났고, 움직이는 방향과 나란한 다른 선 바로 위에 있으면 그 선으로 옮겨 감 (교차점에서 방향 틀기)
+    if(mv && mv[2]>=6*unit()){
+      let best=null;
+      for(const c of candidates(x,y,near)){
+        if(c.si===cur.si) continue;
+        const [tx,ty]=tangent(c.si,c.i), cos=Math.abs(tx*mv[0]+ty*mv[1]);
+        if(cos>=0.8 && c.d<f.d*0.6 && (!best||c.d-cos*near<best.d-best.cos*near)) best={...c,cos};
+      }
+      if(best){
+        cur={si:best.si,i:best.i}; st.ink[cur.si][cur.i]=1;
+        if(lp){ const b=follow(lp[0],lp[1],6); if(b.d<=tol) paintRange(cur.si,cur.i,b.k,1); }   // 교차점까지 빈틈 메우기
+        st.dirty=true; lp=[x,y]; return;
+      }
+    }
+    if(f.d<=tol) paintTo(x,y,f);
+  }
+  function eraseMark(x,y){ nearby(B,x,y,st.esize,(si,i)=>{st.ink[si][i]=0}); st.dirty=true; }
+  let down=false,last=null,pan=null;
+  const pos=e=>{const r=cv.getBoundingClientRect(),[vw]=viewSize(st.rot),k=vw/r.width;return viewToBoard(st.rot,(e.clientX-r.left)*k,(e.clientY-r.top)*k)};
+  function showRing(e){
+    if(st.tool!=='erase'||st.locked){ring.style.display='none';return}
+    const fr=frame.getBoundingClientRect(), r=cv.getBoundingClientRect(), [vw]=viewSize(st.rot), d=st.esize*2*r.width/vw;
+    ring.style.display='block'; ring.style.width=ring.style.height=d+'px';
+    ring.style.left=(e.clientX-fr.left-d/2)+'px'; ring.style.top=(e.clientY-fr.top-d/2)+'px';
+  }
+  cv.addEventListener('pointerdown',e=>{
+    if(st.locked)return; e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    if(st.tool==='pan'||e.button===1||e.button===2){pan={x:e.clientX,y:e.clientY,l:vp.scrollLeft,t:vp.scrollTop};cv.style.cursor='grabbing';return}
+    down=true;snap();cur=null;pend=null;lp=null;trail=[];last=pos(e);
+    if(st.tool==='pen')penMark(...last); else {eraseMark(...last);showRing(e)}
+    redraw();
+    // 확대 중에 왼쪽 버튼을 꾹 누르고 있으면(움직이지 않고 0.35초) → 보드 옮기기
+    clearTimeout(hold.t); hold.x=e.clientX; hold.y=e.clientY;
+    if(st.zoom>1) hold.t=setTimeout(()=>{
+      if(!down) return;
+      if(st.undo.length){st.ink=st.undo.pop();redraw()}      // 누른 순간 찍힌 점 취소
+      down=false; cur=null; pend=null; ring.style.display='none';
+      pan={x:hold.x,y:hold.y,l:vp.scrollLeft,t:vp.scrollTop,hold:true}; cv.style.cursor='grabbing';
+      frame.classList.add('panning'); if(navigator.vibrate) navigator.vibrate(15);
+    },350);
+  });
+  const hold={t:0,x:0,y:0};
+  cv.addEventListener('pointermove',e=>{
+    showRing(e);
+    if(pan){vp.scrollLeft=pan.l-(e.clientX-pan.x);vp.scrollTop=pan.t-(e.clientY-pan.y);return}
+    if(down && hold.t && Math.hypot(e.clientX-hold.x,e.clientY-hold.y)>6){clearTimeout(hold.t);hold.t=0}   // 움직이면 그리기
+    if(!down||st.locked)return;
+    const p=pos(e),d=Math.hypot(p[0]-last[0],p[1]-last[1]),n=Math.max(1,Math.ceil(d/3));
+    for(let k=1;k<=n;k++){const x=last[0]+(p[0]-last[0])*k/n,y=last[1]+(p[1]-last[1])*k/n; st.tool==='pen'?penMark(x,y):eraseMark(x,y)}
+    last=p;redraw();
+  });
+  cv.addEventListener('pointerleave',()=>{ring.style.display='none'});
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  const up=()=>{ clearTimeout(hold.t); hold.t=0; frame.classList.remove('panning');
+    if(pan&&st.tool!=='pan'){pan=null;setTool(st.tool)} if(pend){const c=pend.c.reduce((a,b)=>b.d<a.d?b:a);st.ink[c.si][c.i]=1;st.dirty=true;pend=null;redraw()} cur=null;if(pan){pan=null;cv.style.cursor='grab'}if(down){down=false;opts.onChange&&opts.onChange()}};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  // 마우스 휠 / 트랙패드 핀치로 확대·축소 — 마우스가 가리키는 곳을 기준으로
+  let zq=null, told=false;
+  function zoomTo(z,cx,cy){
+    z=Math.max(ZMIN,Math.min(ZMAX,z)); if(Math.abs(z-st.zoom)<0.001) return;
+    const vr=vp.getBoundingClientRect(), ox=cx==null?vr.width/2:cx-vr.left, oy=cy==null?vr.height/2:cy-vr.top;
+    zq={z, fx:(vp.scrollLeft+ox)/Math.max(1,cv.clientWidth), fy:(vp.scrollTop+oy)/Math.max(1,cv.clientHeight), ox, oy};
+    requestAnimationFrame(()=>{ if(!zq) return; const q=zq; zq=null; st.zoom=q.z; fit(true,q); });
+    if(z>1 && !told){told=true;toast('🔍 휠로 확대·축소 · 꾹 누른 채 끌면 보드 옮기기')}
+  }
+  vp.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const base = zq ? zq.z : st.zoom;
+    const dy = e.deltaMode===1 ? e.deltaY*33 : e.deltaY;          // 줄 단위 휠 보정
+    zoomTo(base*Math.exp(-dy*(e.ctrlKey?0.01:0.0015)), e.clientX, e.clientY);
+  },{passive:false});
+  function zoomStep(dir){ zoomTo((zq?zq.z:st.zoom)*(dir>0?1.3:1/1.3)); }
+  host.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>{
+    const a=b.dataset.a;
+    if(a==='zin'){zoomStep(1);return} if(a==='zout'){zoomStep(-1);return}
+    if(b.dataset.t){ if(b.dataset.t==='pan'||!st.locked) setTool(b.dataset.t); return; }
+    if(st.locked)return;
+    if(a==='undo'&&st.undo.length){st.ink=st.undo.pop();st.dirty=true;redraw()}
+    if(a==='clear'){snap();st.ink=emptyInk(B);st.dirty=true;redraw()}
+    if(a==='rot'){st.rot=(st.rot+1)%4;st.dirty=true;fit()}
+    if(a==='flip'){ st.inks[st.side]=st.ink; st.side^=1; B=boards[st.side]; st.ink=st.inks[st.side]||emptyInk(B);
+      st.undo=[]; cur=null; st.dirty=true; sideLbl(); frame.classList.remove('flipping'); void frame.offsetWidth; frame.classList.add('flipping'); redraw();
+      opts.onFlip&&opts.onFlip(st.side); }
+    opts.onChange&&opts.onChange();
+  }));
+  const er=host.querySelector('.erange'), ev=host.querySelector('.eval');
+  er.addEventListener('input',()=>{st.esize=+er.value;ev.textContent=er.value;
+    const r=cv.getBoundingClientRect(),[vw]=viewSize(st.rot),d=st.esize*2*r.width/vw,fr=frame.getBoundingClientRect();   // 미리보기 원
+    ring.style.display='block';ring.style.width=ring.style.height=d+'px';ring.style.left=(r.left+r.width/2-fr.left-d/2)+'px';ring.style.top=(r.top+r.height/2-fr.top-d/2)+'px'});
+  er.addEventListener('change',()=>{ring.style.display='none'});
+  let lastW=0; const ro=new ResizeObserver(()=>{if(host.clientWidth!==lastW){lastW=host.clientWidth;fit(true)}}); ro.observe(host);
+  setTool('pen'); fit(); sideLbl();
+  return {st, board:()=>B, lock(){st.locked=true;ring.style.display='none';host.querySelectorAll('.tool').forEach(x=>{if(!/zin|zout/.test(x.dataset.a||'')&&x.dataset.t!=='pan')x.style.opacity=.35});frame.style.filter='saturate(.8)'}, destroy(){ro.disconnect()}};
+}
+
+function timerHTML(left,total){
+  const r=26,C=2*Math.PI*r,f=Math.max(0,left/total);
+  return `<svg width="62" height="62"><circle cx="31" cy="31" r="${r}" stroke="#e8dfd0" stroke-width="6" fill="none"/>
+  <circle cx="31" cy="31" r="${r}" stroke="${left<=20?'#d8392b':'#111'}" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-f)}"/></svg>
+  <span>${Math.ceil(left)}</span>`;
+}
+const DRAW_MS = 120000;
+
+/* =========================================================
+   규칙
+   ========================================================= */
+function showRules(){
+  modal(`<div class="rules">
+  <h3>🔮 크라클 오라클 규칙</h3>
+  <p>모두가 한 팀인 <b>협력 게임</b>이에요. 점선이 가득한 낙서 보드에서 제시어를 그리고, 오라클 카드 중 <b>아무도 그리지 않은 카드</b>를 골라 뒤집어요.</p>
+  <h3>준비</h3>
+  <ul><li>쉬운 단어(카드의 흰 칸, 검은 글씨) / 어려운 단어(검은 칸, 흰 글씨) 중 하나를 정해요.</li>
+  <li>각자 <b>양면 크라클 보드</b> 1개를 받아요. 보드마다 점선 모양이 모두 달라요. 처음 위로 오는 면은 무작위예요.</li></ul>
+  <h3>① 낙서 단계 (동시에, 2분)</h3>
+  <ul><li>오라클 카드 1장을 받아 정한 단어를 확인해요.</li>
+  <li><b>점선 위에만</b> 그릴 수 있어요. 펜을 떼고 여러 곳을 그려도 돼요.</li>
+  <li>글자·숫자는 쓰면 안 돼요.</li>
+  <li>보드를 가로/세로, 위/아래 마음대로 돌리거나 <b>뒤집어 뒷면에</b> 그려도 돼요. 다 그리면 <b>마커를 그림의 아래쪽</b>에 두어 방향을 알려 줘요.</li></ul>
+  <h3>② 오라클 단계 (한 명씩)</h3>
+  <ul><li>모두의 카드에 <b>같은 수의 카드</b>를 덱에서 더해 섞고 앞면으로 펼쳐요.</li>
+  <li>차례대로 한 명씩, <b>아무 보드에도 그려지지 않았다</b>고 생각하는 카드 1장을 뒤집어요.</li>
+  <li>각자 혼자 결정해요. 조언·힌트 금지! 내 카드가 뒤집혀도 비밀로 해요.</li>
+  <li>1라운드 첫 차례는 <b>마지막으로 그림을 완성한 사람</b>, 이후 라운드는 시계 방향으로 넘어가요.</li></ul>
+  <h3>③ 공개 · 다음 라운드</h3>
+  <ul><li>모두 뒤집었으면 각자 그린 단어를 공개해요. <b>누군가 그린 카드를 뒤집었다면 오류 1점</b>.</li>
+  <li>보드를 지우고 <b>왼쪽 사람(시계 방향)</b>에게 넘겨요. 다음 라운드에는 새 보드로 그려요.</li></ul>
+  <h3>게임 끝</h3>
+  <ul><li>최대 4라운드. 오류가 <b>플레이어 수보다 많아지면</b> 즉시 패배 (예: 5인은 오류 5개까지 허용).</li>
+  <li>4라운드를 마칠 때까지 버티면 모두 승리!</li></ul>
+  <h3>2~3인 규칙</h3>
+  <ul><li>각자 카드 2장을 받아 <b>두 단어를 한 보드에</b> 그려요. 어느 선이 어느 단어인지 힌트 금지.</li>
+  <li>2인은 4장, 3인은 6장을 더 섞고, 각자 2장씩 뒤집을 때까지 차례대로 진행해요.</li></ul>
+  <div class="actions"><button class="btn" onclick="closeModal()">알겠어요</button></div></div>`);
+}
+$('#btnRules').onclick=showRules;
+
+/* =========================================================
+   혼자 그려보기 (Firebase 없이)
+   ========================================================= */
+let P=null;
+function startPractice(){
+  if(P){P.ctrl.destroy();clearInterval(P.iv)}
+  const seed=Math.floor(Math.random()*1e9), B=[genBoard(seed),genBoard((seed+104729)>>>0)], ci=Math.floor(Math.random()*NCARDS);
+  show('practice');
+  $('#pCard').innerHTML=cardHTML(ci,'easy','big');
+  const ctrl=mountDraw($('#pStage'),B,{side:Math.random()<.5?0:1});
+  const end=Date.now()+DRAW_MS;
+  P={ctrl,iv:setInterval(()=>{const left=(end-Date.now())/1000;$('#pTimer').innerHTML=timerHTML(Math.max(0,left),120);$('#pTimer').classList.toggle('hurry',left<=20);
+    if(left<=0){clearInterval(P.iv);ctrl.lock();toast('⏰ 시간 끝! 오라클이 그림을 읽고 있어요…')}},250)};
+}
+$('#btnPractice').onclick=startPractice;
+$('#pNew').onclick=startPractice;
+$('#pBack').onclick=()=>{if(P){P.ctrl.destroy();clearInterval(P.iv);P=null}show('home')};
+
+/* =========================================================
+   온라인 (Firebase Realtime Database)
+   rooms/{CODE}/players/{pid}  : {name, joinedAt, online}
+   rooms/{CODE}/state          : 게임 진행 상태
+   rooms/{CODE}/ink/{round}/{pid} : {d: 잉크, rot: 방향}
+   ========================================================= */
+const hasCfg = !!(firebaseConfig.apiKey && firebaseConfig.databaseURL);
+let db=null, off=0;
+if(hasCfg){
+  firebase.initializeApp(firebaseConfig); db=firebase.database();
+  db.ref('.info/serverTimeOffset').on('value',s=>off=s.val()||0);
+}else{
+  $('#cfgWarn').style.display='block'; $('#btnCreate').disabled=true; $('#btnJoin').disabled=true;
+}
+const now=()=>Date.now()+off;
+
+const ME = localStorage.getItem('ko_pid') || ('p'+Math.random().toString(36).slice(2,10));
+localStorage.setItem('ko_pid',ME);
+$('#nameIn').value = localStorage.getItem('ko_name')||'';
+const qs=new URLSearchParams(location.search); if(qs.get('room')) $('#codeIn').value=qs.get('room').toUpperCase();
+
+let code=null, roomRef=null, S=null, PL={}, INK={}, inkRound=0, viewKey='', drawCtrl=null, tick=null, selCard=null, lastUp=0;
+
+function myName(){const n=$('#nameIn').value.trim();if(!n){toast('닉네임을 입력해 주세요');return null}localStorage.setItem('ko_name',n);return n}
+function genCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let c='';for(let i=0;i<4;i++)c+=A[Math.floor(Math.random()*A.length)];return c}
+
+$('#btnCreate').onclick=async()=>{
+  const n=myName(); if(!n) return;
+  let c; for(let t=0;t<6;t++){c=genCode();const s=await db.ref('rooms/'+c+'/state').get();if(!s.exists())break}
+  await db.ref('rooms/'+c+'/state').set({phase:'lobby',host:ME,diff:'easy',created:now()});
+  enterRoom(c,n);
+};
+$('#btnJoin').onclick=async()=>{
+  const n=myName(); if(!n) return;
+  const c=$('#codeIn').value.trim().toUpperCase(); if(c.length!==4){toast('4자리 방 코드를 입력해 주세요');return}
+  const s=await db.ref('rooms/'+c+'/state').get();
+  if(!s.exists()){toast('그런 방이 없어요');return}
+  const st=s.val();
+  if(st.phase!=='lobby' && !(st.order||[]).includes(ME)){toast('이미 게임이 시작된 방이에요');return}
+  const ps=(await db.ref('rooms/'+c+'/players').get()).val()||{};
+  if(st.phase==='lobby' && !ps[ME] && Object.keys(ps).length>=8){toast('방이 가득 찼어요 (최대 8명)');return}
+  enterRoom(c,n);
+};
+
+function enterRoom(c,name){
+  code=c; roomRef=db.ref('rooms/'+c);
+  history.replaceState(null,'','?room='+c);
+  const me=roomRef.child('players/'+ME);
+  me.once('value').then(s=>{
+    const v=s.val()||{}; me.update({name, joinedAt:v.joinedAt||now(), online:true});
+    me.child('online').onDisconnect().set(false);
+  });
+  if(!enterRoom.hooked){enterRoom.hooked=true;db.ref('.info/connected').on('value',s=>{if(s.val()&&roomRef){const me=roomRef.child('players/'+ME);me.child('online').set(true);me.child('online').onDisconnect().set(false)}})}
+  roomRef.child('players').on('value',s=>{PL=s.val()||{};render()});
+  roomRef.child('state').on('value',s=>{S=s.val();if(!S){toast('방이 사라졌어요');leave();return}render()});
+  clearInterval(tick); tick=setInterval(onTick,300);
+}
+function leave(){
+  if(roomRef){roomRef.child('players').off();roomRef.child('state').off();
+    if(S&&S.phase==='lobby'){roomRef.child('players/'+ME+'/online').onDisconnect().cancel();roomRef.child('players/'+ME).remove();} else roomRef.child('players/'+ME+'/online').set(false);}
+  if(inkRound){roomRef&&roomRef.child('ink/'+inkRound).off();inkRound=0}
+  clearInterval(tick); roomRef=null; code=null; S=null; viewKey=''; if(drawCtrl){drawCtrl.destroy();drawCtrl=null}
+  history.replaceState(null,'',location.pathname); show('home');
+}
+$('#btnLeave').onclick=leave;
+$('#btnCopy').onclick=()=>{const u=location.origin+location.pathname+'?room='+code;navigator.clipboard?.writeText(u).then(()=>toast('초대 링크를 복사했어요'),()=>toast(u))};
+
+/* ---------- 상태 헬퍼 ---------- */
+const order=()=>S&&S.order||[];
+const nP=()=>order().length;
+const perHand=()=>nP()<=3?2:1;
+const seatOf=p=>order().indexOf(p);
+const pname=p=>(PL[p]&&PL[p].name)||'???';
+const online=p=>!!(PL[p]&&PL[p].online);
+const isHost=()=>S&&(S.host===ME || !online(S.host));
+const faceSeed=(b,side)=>(S.seed + b*7919 + side*104729)>>>0;
+const curSide=b=>(S.sides&&S.sides[b])?1:0;
+const boardSeed=(b,side)=>faceSeed(b, side==null?curSide(b):side);
+const inkSide=p=>{const v=INK[p]; return v&&v.side!=null?v.side:curSide(S.boards[p])};
+const turnSeat=()=> (S.first + S.turn) % nP();
+const lobbyPlayers=()=>Object.entries(PL).filter(e=>e[1]&&e[1].name).sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0)).map(e=>e[0]);
+
+function tx(fn){return roomRef.child('state').transaction(st=>{if(!st)return st;const r=fn(st);return r===false?undefined:st})}
+
+function dealRound(st){
+  const n=st.order.length,k=n<=3?2:1;
+  st.hands={}; st.order.forEach(p=>{st.hands[p]=st.deck.slice(st.pos,st.pos+k);st.pos+=k});
+  // 보드는 라운드마다 왼쪽(시계 방향) 사람에게 넘김 → r라운드에 i번 자리는 (i-(r-1))번 보드
+  st.boards={}; st.order.forEach((p,i)=>{st.boards[p]=(((i-(st.round-1))%n)+n)%n});
+  st.done={}; st.grid=null; st.flipped=null; st.turn=0; st.roundErr=0;
+  st.drawEndsAt=now()+DRAW_MS; st.phase='draw';
+}
+function startGame(){
+  const ps=lobbyPlayers().filter(online);
+  if(ps.length<2){toast('2명 이상 필요해요');return}
+  if(ps.length>8){toast('최대 8명까지예요');return}
+  tx(st=>{
+    if(st.phase!=='lobby')return false;
+    st.order=ps; st.round=1; st.errors=0; st.over=false; st.lost=false;
+    st.deck=shuffle([...Array(NCARDS).keys()]); st.pos=0;
+    st.seed=Math.floor(Math.random()*1e9); st.sides=ps.map(()=>Math.random()<.5?0:1);
+    st.first=0; st.firstSet=false;
+    dealRound(st);
+  });
+}
+function toOracle(st){
+  const n=st.order.length;
+  const owned=[]; st.order.forEach(p=>(st.hands[p]||[]).forEach(w=>owned.push({w,o:p})));
+  const decoys=st.deck.slice(st.pos,st.pos+owned.length).map(w=>({w,o:''})); st.pos+=owned.length;
+  st.grid=shuffle(owned.concat(decoys));
+  if(st.round===1){
+    // 1라운드: 마지막으로 그림을 본(완성한) 사람이 첫 차례
+    const done=st.done||{}; let best=0,bt=-1;
+    st.order.forEach((p,i)=>{const t=done[p]||(st.drawEndsAt+i);if(t>bt){bt=t;best=i}});
+    st.first=best;
+  }else st.first=(st.first+1)%n;
+  st.turn=0; st.flipped={}; st.phase='oracle';
+}
+function flipCard(idx,asPid){
+  tx(st=>{
+    if(st.phase!=='oracle')return false;
+    const n=st.order.length,k=n<=3?2:1,ts=(st.first+st.turn)%n;
+    if(st.order[ts]!==asPid)return false;
+    st.flipped=st.flipped||{}; if(st.flipped['c'+idx])return false;
+    st.flipped['c'+idx]=asPid; st.turn++;
+    if(st.turn>=n*k){
+      let e=0; Object.keys(st.flipped).forEach(key=>{if(st.grid[+key.slice(1)].o)e++});
+      st.roundErr=e; st.errors=(st.errors||0)+e;
+      st.lost=st.errors>n; st.over=st.lost||st.round>=4; st.phase='reveal';
+    }
+  });
+  selCard=null;
+}
+function nextRound(){
+  tx(st=>{
+    if(st.phase!=='reveal')return false;
+    if(st.over){st.phase='end';return}
+    st.round++; dealRound(st);
+  });
+}
+function backToLobby(){
+  tx(st=>{if(st.phase!=='end')return false;
+    ['order','hands','boards','done','grid','flipped','deck'].forEach(k=>delete st[k]);st.phase='lobby';st.host=st.host||ME});
+  roomRef.child('ink').remove();
+}
+
+/* ---------- 주기 처리 (타이머/진행) ---------- */
+function onTick(){
+  if(!S) return;
+  if(S.phase==='draw'){
+    const left=Math.max(0,(S.drawEndsAt-now())/1000);
+    const tm=$('#gTimer'); if(tm){tm.innerHTML=timerHTML(left,120);tm.classList.toggle('hurry',left<=20)}
+    const mine=order().includes(ME);
+    if(mine && drawCtrl){
+      if(drawCtrl.st.dirty && Date.now()-lastUp>1500) uploadInk();
+      if(left<=0 && !(S.done||{})[ME]) finishDrawing(true);
+    }
+    const allDone=order().every(p=>(S.done||{})[p] || !online(p));
+    if((allDone && order().some(p=>(S.done||{})[p])) || now()>S.drawEndsAt+2500){
+      tx(st=>{if(st.phase!=='draw'||st.round!==S.round)return false;toOracle(st)});
+    }
+  }
+}
+function uploadInk(){
+  if(!drawCtrl||!S)return; lastUp=Date.now(); drawCtrl.st.dirty=false;
+  return roomRef.child(`ink/${S.round}/${ME}`).set({d:encInk(drawCtrl.st.ink),rot:drawCtrl.st.rot,side:drawCtrl.st.side});
+}
+async function finishDrawing(auto){
+  if(!drawCtrl||drawCtrl.finished) return; drawCtrl.finished=true;
+  drawCtrl.lock(); await uploadInk();
+  roomRef.child('state/done/'+ME).set(now());
+  if(auto) toast('⏰ 시간 끝! 그림을 제출했어요');
+}
+
+/* =========================================================
+   화면 그리기
+   ========================================================= */
+function render(){
+  if(!S) return;
+  if(S.phase==='lobby'){renderLobby();return}
+  if(!order().includes(ME)){show('game');$('#hud').innerHTML='';$('#stage').innerHTML='<div class="banner">게임이 진행 중이에요<small>다음 게임에 참가할 수 있어요</small></div>';return}
+  show('game');
+  // 잉크 구독 (오라클·공개 단계에서 필요)
+  if(inkRound!==S.round){ if(inkRound)roomRef.child('ink/'+inkRound).off(); inkRound=S.round; INK={};
+    roomRef.child('ink/'+S.round).on('value',s=>{INK=s.val()||{}; if(S&&S.phase!=='draw')renderStage(true)}); }
+  renderHud(); renderStage(false);
+}
+function renderLobby(){
+  show('lobby'); $('#lobCode').textContent=code;
+  const ps=lobbyPlayers();
+  $('#lobCount').textContent=`(${ps.filter(online).length}/8)`;
+  $('#lobPlayers').innerHTML=ps.map(p=>`<div class="pchip"><span class="dot ${online(p)?'':'off'}"></span>${esc(pname(p))}${p===S.host?' 👑':''}${p===ME?' <small style="color:var(--muted)">(나)</small>':''}</div>`).join('');
+  document.querySelectorAll('#diffSeg button').forEach(b=>{b.classList.toggle('on',b.dataset.d===S.diff);b.disabled=!isHost();
+    b.onclick=()=>roomRef.child('state/diff').set(b.dataset.d)});
+  const cnt=ps.filter(online).length;
+  $('#btnStart').style.display=isHost()?'':'none';
+  $('#btnStart').disabled=cnt<2||cnt>8;
+  $('#btnStart').onclick=startGame;
+  $('#lobHint').textContent=isHost()? (cnt<2?'친구가 들어오길 기다리는 중…':'') : '방장이 게임을 시작할 때까지 기다려 주세요';
+  viewKey='';
+}
+function renderHud(){
+  const n=nP(), e=S.errors||0;
+  let slots=''; for(let i=0;i<n+1;i++) slots+=`<i class="${i<e?'f':''} ${i===n?'lim':''}"></i>`;
+  const ph={draw:'낙서 중',oracle:'오라클',reveal:'공개',end:'게임 끝'}[S.phase];
+  $('#hud').innerHTML=`<span class="pill">라운드 <b>${Math.min(S.round,4)}</b> / 4</span>
+    <span class="pill">${ph}</span>
+    <span class="pill" title="오류가 ${n}개를 넘으면 패배">오류 <b>${e}</b> / ${n} <span class="errs" style="display:inline-flex;vertical-align:middle;margin-left:6px">${slots}</span></span>
+    <span class="spacer"></span>
+    <span class="pill">${esc(code)}</span>
+    <button class="btn ghost" style="padding:7px 12px;font-size:14px" onclick="showRules()">규칙</button>`;
+}
+function renderStage(inkOnly){
+  const key=S.phase+':'+S.round;
+  if(S.phase==='draw'){ if(key!==viewKey){viewKey=key;buildDraw()} else updateDraw(); return; }
+  if(drawCtrl){drawCtrl.destroy();drawCtrl=null}
+  viewKey=key;
+  if(S.phase==='oracle') buildOracle();
+  else if(S.phase==='reveal') buildReveal();
+  else if(S.phase==='end') buildEnd();
+}
+
+/* ---------- 낙서 단계 ---------- */
+function buildDraw(){
+  const hand=(S.hands||{})[ME]||[], bi=S.boards[ME], faces=[genBoard(faceSeed(bi,0)),genBoard(faceSeed(bi,1))];
+  const n=nP(), my=seatOf(ME), from=order()[(my-1+n)%n], to=order()[(my+1)%n];
+  const pass = S.round>1 ? `<span class="passnote">◀ ${esc(pname(from))}에게서 넘겨받은 보드 · 끝나면 ${esc(pname(to))}에게 넘겨요 ▶</span>`
+                         : `<span class="passnote">내 보드 ${bi+1}번 · 끝나면 왼쪽의 ${esc(pname(to))}에게 넘겨요 ▶</span>`;
+  $('#stage').innerHTML=`
+    <div class="banner">오라클의 메시지를 그려라!<small>${hand.length>1?'두 단어를 모두 한 보드에 그려요 — 어느 선이 어느 단어인지 힌트 금지':'점선 위에만 그릴 수 있어요 · 앞면·뒷면 중 마음에 드는 면을 골라요'}</small>${pass}</div>
+    <div class="drawtop"><div class="myhand">${hand.map(i=>cardHTML(i,S.diff,'big')).join('')}</div><div class="timer" id="gTimer"></div></div>
+    <div id="drawHost"></div>
+    <div class="actions"><button class="btn pink" id="btnDone">✅ 다 그렸어요</button></div>
+    <div class="center hint" id="doneInfo"></div>`;
+  if(drawCtrl) drawCtrl.destroy();
+  // 새로고침으로 다시 들어온 경우 저장된 그림 복원
+  roomRef.child(`ink/${S.round}/${ME}`).once('value').then(s=>{
+    const v=s.val(), side=v&&v.side!=null?v.side:curSide(bi);
+    drawCtrl=mountDraw($('#drawHost'),faces,{side,ink:v?decInk(faces[side],v.d):null,rot:v?v.rot:0,onChange:()=>{},
+      onFlip:sd=>{roomRef.child('state/sides/'+bi).set(sd);}});
+    if((S.done||{})[ME]) drawCtrl.lock();
+    updateDraw();
+  });
+  $('#btnDone').onclick=()=>{ if(drawCtrl&&!inkCount(drawCtrl.st.ink)&&!confirm('아직 아무것도 안 그렸어요. 그래도 완성할까요?'))return; finishDrawing(false) };
+}
+function updateDraw(){
+  const done=S.done||{}, n=order().filter(p=>done[p]).length;
+  const b=$('#btnDone'); if(b){b.disabled=!!done[ME]; b.textContent=done[ME]?'제출 완료 — 다른 사람을 기다리는 중':'✅ 다 그렸어요'}
+  const info=$('#doneInfo'); if(info) info.innerHTML=`완성: ${n} / ${nP()} &nbsp;·&nbsp; `+order().map(p=>`${done[p]?'✅':'✏️'} ${esc(pname(p))}`).join(' ');
+}
+
+/* ---------- 보드 모음 ---------- */
+function galleryHTMLInto(el,opts={}){
+  el.innerHTML='';
+  const w=Math.max(150,Math.min(300,(el.clientWidth||window.innerWidth)/(nP()<=2?2.3:nP()<=4?2.3:3.3)));
+  order().forEach((p,i)=>{
+    const B=genBoard(boardSeed(S.boards[p],inkSide(p))), v=INK[p]||{}, ink=decInk(B,v.d), rot=v.rot||0;
+    const it=document.createElement('div'); it.className='gitem';
+    const [vw,vh]=viewSize(rot); const cw = rot%2 ? w*0.78 : w;
+    it.appendChild(boardThumb(B,ink,rot,cw));
+    const nm=document.createElement('div'); nm.className='gname'+(opts.turnP===p?' turn':''); nm.textContent=pname(p)+(p===ME?' (나)':''); it.appendChild(nm);
+    if(opts.words){const wd=document.createElement('div');wd.className='gwords';wd.innerHTML=(S.hands[p]||[]).map(ci=>`<span class="ctag ok">${esc(wordOf(ci,S.diff))}</span>`).join('');it.appendChild(wd)}
+    it.onclick=()=>zoomBoard(p);
+    el.appendChild(it);
+  });
+}
+function zoomBoard(p){
+  const B=genBoard(boardSeed(S.boards[p],inkSide(p))), v=INK[p]||{}, rot=v.rot||0;
+  modal(`<div class="center"><div class="banner" style="margin-top:0">${esc(pname(p))}의 예언 그림</div><div id="zoomBox" style="display:flex;justify-content:center"></div>
+    <div class="actions"><button class="btn" onclick="closeModal()">닫기</button></div></div>`);
+  const box=$('#zoomBox'); const [vw,vh]=viewSize(rot);
+  const w=Math.min(box.clientWidth-30, (window.innerHeight*0.66)*vw/vh);
+  box.appendChild(boardThumb(B,decInk(B,v.d),rot,w));
+}
+
+/* ---------- 오라클 단계 ---------- */
+function buildOracle(){
+  const ts=turnSeat(), tp=order()[ts], myTurn=tp===ME, k=perHand(), total=nP()*k, fl=S.flipped||{};
+  const myHand=(S.hands||{})[ME]||[];
+  $('#stage').innerHTML=`
+    <div class="banner">${myTurn?'🔮 내 차례! 아무도 그리지 않은 카드를 뒤집어요':`🔮 ${esc(pname(tp))}의 차례`}
+      <small>뒤집은 카드 ${S.turn} / ${total} · 조언·힌트 금지 · 내 카드가 뒤집혀도 비밀!</small></div>
+    <div class="gallery" id="gal"></div>
+    <div class="cgrid" id="cg"></div>
+    <div class="actions" id="oAct"></div>
+    <div class="center hint" style="margin-top:6px">내 카드: ${myHand.map(i=>`<b>${esc(wordOf(i,S.diff))}</b>`).join(', ')}</div>`;
+  galleryHTMLInto($('#gal'),{turnP:tp});
+  const cg=$('#cg');
+  S.grid.forEach((c,i)=>{
+    const f=!!fl['c'+i], wrap=document.createElement('div'); wrap.className='cwrap';
+    wrap.innerHTML=cardHTML(c.w,S.diff,(f?'back':'')+(myTurn&&!f?' pick':'')+(selCard===i?' sel':''));
+    if(myTurn&&!f) wrap.firstElementChild.onclick=()=>{selCard=selCard===i?null:i;buildOracle()};
+    cg.appendChild(wrap);
+  });
+  const act=$('#oAct');
+  if(myTurn){
+    act.innerHTML=`<button class="btn pink" id="btnFlip" ${selCard==null?'disabled':''}>👁 이 카드 뒤집기</button>`;
+    $('#btnFlip').onclick=()=>{if(selCard!=null)flipCard(selCard,ME)};
+  }else if(!online(tp)){
+    act.innerHTML=`<button class="btn ghost" id="btnProxy">${esc(pname(tp))} 자리 비움 — 무작위로 대신 뒤집기</button>`;
+    $('#btnProxy').onclick=()=>{const c=S.grid.map((_,i)=>i).filter(i=>!fl['c'+i]);flipCard(c[Math.floor(Math.random()*c.length)],tp)};
+  }
+}
+
+/* ---------- 공개 단계 ---------- */
+function buildReveal(){
+  const fl=S.flipped||{}, n=nP();
+  $('#stage').innerHTML=`
+    <div class="banner">오라클의 답이 공개됐어요!<small>이번 라운드 오류 ${S.roundErr}개 · 누적 ${S.errors} / 허용 ${n}</small></div>
+    <div class="gallery" id="gal"></div>
+    <div class="cgrid" id="cg"></div>
+    <div class="actions" id="rAct"></div>`;
+  galleryHTMLInto($('#gal'),{words:true});
+  const cg=$('#cg');
+  S.grid.forEach((c,i)=>{
+    const f=!!fl['c'+i], fb=fl['c'+i], wrap=document.createElement('div'); wrap.className='cwrap';
+    let cls='',tag='';
+    if(c.o&&f){cls='err';tag=`<span class="ctag bad">❌ ${esc(pname(c.o))}의 카드였어요 (뒤집은 사람: ${esc(pname(fb))})</span>`}
+    else if(c.o){cls='good';tag=`<span class="ctag ok">✓ ${esc(pname(c.o))}</span>`}
+    else if(f){tag=`<span class="ctag dim">잘 뒤집음 · ${esc(pname(fb))}</span>`}
+    else tag=`<span class="ctag bad">남은 가짜 카드</span>`;
+    wrap.innerHTML=cardHTML(c.w,S.diff,cls)+tag; cg.appendChild(wrap);
+  });
+  const msg = S.lost?'오류가 너무 많아요… 결과 보기':(S.over?'4라운드 완주! 결과 보기':`보드를 지우고 왼쪽으로 넘기기 ▶ 다음 라운드`);
+  $('#rAct').innerHTML=`<button class="btn pink" id="btnNext">${msg}</button>`;
+  $('#btnNext').onclick=nextRound;
+}
+
+/* ---------- 게임 끝 ---------- */
+function buildEnd(){
+  const n=nP(), win=!S.lost;
+  $('#stage').innerHTML=`
+    <div class="bigres" style="color:${win?'var(--ink)':'var(--red)'}">${win?'🔮 예언 해독 성공!':'💫 오라클이 흐려졌어요…'}</div>
+    <div class="center" style="color:#4b3a28;font-size:16px">${win?`4라운드 동안 오류 ${S.errors}개 (허용 ${n}개) — 모두의 승리!`:`${S.round}라운드에서 오류 ${S.errors}개로 허용치 ${n}개를 넘었어요`}</div>
+    <div class="banner" style="font-size:22px;margin-top:18px">마지막 라운드 작품들</div>
+    <div class="gallery" id="gal"></div>
+    <div class="actions"><button class="btn" id="btnAgain">대기실로 (다시 하기)</button><button class="btn ghost" id="btnOut">나가기</button></div>
+    <div class="foot">made by m00n</div>`;
+  galleryHTMLInto($('#gal'),{words:true});
+  $('#btnAgain').onclick=backToLobby; $('#btnOut').onclick=leave;
+}
+
+window.addEventListener('resize',()=>{if(S&&S.phase!=='draw'&&S.phase!=='lobby'){clearTimeout(render._r);render._r=setTimeout(()=>renderStage(true),200)}});
+</script>
+</body>
+</html>
