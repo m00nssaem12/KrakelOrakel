@@ -331,18 +331,45 @@ function genBoard(seed){
   // ③ 자잘하게 구불거리는 낙서 선 (불규칙)
   function meander(x,y){ natural(x,y,{sig:0.007+R()*0.006, damp:0.965, spike:0.006, kick:0.3, soft:0.75, pull:0.004}); }
   const STY=[angular,sweep,meander];
+  // ── 선끼리 나란히 붙어 가거나 스치듯 겹치면 버리고 다시 뽑기 ──
+  //    (가까운 곳(18 이내)에서 방향이 거의 같은(약 28° 이내) 구간이 30 넘게 이어지면 불합격)
+  const AC=24, acc=new Map();
+  function tangents(p){const n=p.length/2,t=new Float32Array(n*2);for(let i=0;i<n;i++){const a=Math.max(0,i-3),b=Math.min(n-1,i+3);
+    const x=p[b*2]-p[a*2],y=p[b*2+1]-p[a*2+1],l=Math.hypot(x,y)||1;t[i*2]=x/l;t[i*2+1]=y/l}return t}
+  function tooClose(p){
+    const t=tangents(p), n=p.length/2; let run=0;
+    for(let i=0;i<n;i++){
+      const x=p[i*2],y=p[i*2+1]; if(!inside(x,y,0)){run=0;continue}
+      let hit=false; const cx=Math.floor(x/AC),cy=Math.floor(y/AC);
+      for(let gx=cx-1;gx<=cx+1&&!hit;gx++)for(let gy=cy-1;gy<=cy+1&&!hit;gy++){const b=acc.get(gx+','+gy); if(!b)continue;
+        for(let k=0;k<b.length;k+=4){ if(Math.hypot(b[k]-x,b[k+1]-y)<22 && Math.abs(b[k+2]*t[i*2]+b[k+3]*t[i*2+1])>0.85){hit=true;break} } }
+      run = hit ? run+1 : 0;
+      if(run*3>18) return true;
+    }
+    return false;
+  }
+  function accept(p){const t=tangents(p);for(let i=0;i<p.length/2;i++){const x=p[i*2],y=p[i*2+1];if(!inside(x,y,20))continue;
+    const key=Math.floor(x/AC)+','+Math.floor(y/AC);let b=acc.get(key);if(!b)acc.set(key,b=[]);b.push(x,y,t[i*2],t[i*2+1])}}
+  function addLine(fn,x,y){
+    for(let tries=0;tries<14;tries++){
+      fn(x,y); const p=raw[raw.length-1].p;
+      if(!tooClose(p)){accept(p);return p}
+      raw.pop(); x=Math.min(BW-30,Math.max(30,x+(R()-.5)*260)); y=Math.min(BH-30,Math.max(30,y+(R()-.5)*260));
+    }
+    return null;
+  }
   const main=Math.floor(R()*3), dens=R();
-  const nLine = [11,9,10][main] + Math.round(dens*[12,16,14][main]);   // 판마다 빽빽함 다름
+  const nLine = [11,9,10][main] + Math.round(dens*[17,21,19][main]);   // 판마다 빽빽함 다름
   const pick=()=> R()<0.8 ? STY[main] : STY[Math.floor(R()*3)];     // 한 판은 주로 한 가지 스타일
-  for(let k=0;k<nLine;k++) pick()(30+R()*(BW-60), 30+R()*(BH-60));
+  for(let k=0;k<nLine;k++) addLine(pick(), 30+R()*(BW-60), 30+R()*(BH-60));
   // 빈 곳 메우기 — 9×7 칸 중 선이 거의 없는 칸을 지나는 선 추가
   const GX=9, GY=7, occ=new Uint16Array(GX*GY);
   const markOcc=p=>{for(let i=0;i<p.length;i+=2){const gx=Math.floor(p[i]/BW*GX),gy=Math.floor(p[i+1]/BH*GY);if(gx>=0&&gx<GX&&gy>=0&&gy<GY)occ[gy*GX+gx]++}};
   raw.forEach(r=>markOcc(r.p));
   for(let gi=0;gi<GX*GY;gi++){
     if(occ[gi]>=4) continue;
-    STY[main]((gi%GX+0.25+R()*0.5)*BW/GX, (Math.floor(gi/GX)+0.25+R()*0.5)*BH/GY);
-    markOcc(raw[raw.length-1].p);
+    const p=addLine(STY[main], (gi%GX+0.25+R()*0.5)*BW/GX, (Math.floor(gi/GX)+0.25+R()*0.5)*BH/GY);
+    if(p) markOcc(p);
   }
   // 보드 경계에서 자르기 — 밖으로 나간 부분만 잘라 내므로 선 끝은 항상 보드 테두리에 닿음
   const strokes=[], closed=[];
@@ -528,7 +555,7 @@ function mountDraw(host,boards,opts={}){
   function tangent(si,i){const s=B.strokes[si],n=s.length/2,cl=B.closed[si];
     const a=cl?(i-2+n)%n:Math.max(0,i-2), b=cl?(i+2)%n:Math.min(n-1,i+2);
     const tx=s[b*2]-s[a*2], ty=s[b*2+1]-s[a*2+1], l=Math.hypot(tx,ty)||1; return [tx/l,ty/l]}
-  let lp=null, trail=[];          // lp: 마지막으로 칠한 커서 위치, trail: 최근 커서 경로(움직이는 방향 계산용)
+  let lp=null, trail=[], sw=null;          // lp: 마지막으로 칠한 커서 위치, trail: 최근 커서 경로(움직이는 방향 계산용)
   function motion(x,y){ trail.push([x,y]); if(trail.length>12) trail.shift();
     const o=trail[0], vx=x-o[0], vy=y-o[1], l=Math.hypot(vx,vy); return l>4? [vx/l,vy/l,l] : null }
   function paintTo(x,y,f){ paintRange(cur.si,cur.i,f.k,1); cur.i=f.j; st.dirty=true; lp=[x,y]; }
@@ -545,16 +572,18 @@ function mountDraw(host,boards,opts={}){
     const moved=lp?Math.hypot(x-lp[0],y-lp[1]):0;
     const W=Math.max(3,Math.min(45,Math.ceil((moved*1.4+8)/SP)));
     const f=follow(x,y,W);
-    if(f.d<=near){ paintTo(x,y,f); return; }
+    if(f.d<=near){ sw=null; paintTo(x,y,f); return; }
     // 지금 선에서 벗어났고, 움직이는 방향과 나란한 다른 선 바로 위에 있으면 그 선으로 옮겨 감 (교차점에서 방향 틀기)
     if(mv && mv[2]>=6*unit()){
       let best=null;
       for(const c of candidates(x,y,near)){
         if(c.si===cur.si) continue;
         const [tx,ty]=tangent(c.si,c.i), cos=Math.abs(tx*mv[0]+ty*mv[1]);
-        if(cos>=0.8 && c.d<f.d*0.6 && (!best||c.d-cos*near<best.d-best.cos*near)) best={...c,cos};
+        if(cos>=0.85 && c.d<f.d*0.5 && f.d>near*1.25 && (!best||c.d-cos*near<best.d-best.cos*near)) best={...c,cos};
       }
-      if(best){
+      // 같은 선이 몇 걸음 연속으로 조건을 만족해야 옮겨 감 (손떨림으로 잘못 넘어가는 것 방지)
+      if(best){ sw = (sw&&sw.si===best.si) ? {si:best.si,n:sw.n+1} : {si:best.si,n:1}; if(sw.n<4) best=null; } else sw=null;
+      if(best){ sw=null;
         cur={si:best.si,i:best.i}; st.ink[cur.si][cur.i]=1;
         if(lp){ const b=follow(lp[0],lp[1],6); if(b.d<=tol) paintRange(cur.si,cur.i,b.k,1); }   // 교차점까지 빈틈 메우기
         st.dirty=true; lp=[x,y]; return;
@@ -574,7 +603,7 @@ function mountDraw(host,boards,opts={}){
   cv.addEventListener('pointerdown',e=>{
     if(st.locked)return; e.preventDefault(); cv.setPointerCapture(e.pointerId);
     if(st.tool==='pan'||e.button===1||e.button===2){pan={x:e.clientX,y:e.clientY,l:vp.scrollLeft,t:vp.scrollTop};cv.style.cursor='grabbing';return}
-    down=true;snap();cur=null;pend=null;lp=null;trail=[];last=pos(e);
+    down=true;snap();cur=null;pend=null;lp=null;trail=[];sw=null;last=pos(e);
     if(st.tool==='pen')penMark(...last); else {eraseMark(...last);showRing(e)}
     redraw();
     // 확대 중에 왼쪽 버튼을 꾹 누르고 있으면(움직이지 않고 0.35초) → 보드 옮기기
