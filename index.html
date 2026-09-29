@@ -219,6 +219,7 @@ input.txt:focus{border-color:var(--ink)}
   <div class="hud">
     <button class="btn ghost" id="pBack" style="padding:8px 14px;font-size:15px">← 처음으로</button>
     <div class="spacer"></div>
+    <button class="btn ghost" id="pSave" style="padding:8px 14px;font-size:15px">💾 이미지 저장</button>
     <button class="btn ghost" id="pNew" style="padding:8px 14px;font-size:15px">🔄 새 보드·새 단어</button>
   </div>
   <div class="drawtop"><div id="pCard"></div><div class="timer" id="pTimer"></div></div>
@@ -464,6 +465,65 @@ function boardThumb(B,ink,rot,cssW){
   f.appendChild(cv); const pm=document.createElement('div'); pm.className='penmark'; f.appendChild(pm);
   return f;
 }
+
+/* ---------- 이미지 저장 ---------- */
+function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+// 검은 테두리 보드 + 마커를 ctx의 (x,y)에 폭 w로 그림. 반환: 그린 높이
+function drawBoardTo(ctx,x,y,w,B,ink,rot){
+  const [vw,vh]=viewSize(rot), fr=Math.round(w*0.035), iw=w-fr*2, ih=Math.round(iw*vh/vw), h=ih+fr*2;
+  ctx.save(); ctx.shadowColor='rgba(60,35,10,.35)'; ctx.shadowBlur=w*0.03; ctx.shadowOffsetY=w*0.012;
+  ctx.fillStyle='#1d1f1e'; rrect(ctx,x,y,w,h,fr*1.6); ctx.fill(); ctx.restore();
+  const cv=document.createElement('canvas'); cv.width=Math.round(iw*2); cv.height=Math.round(ih*2); paintBoard(cv,B,ink,rot);
+  ctx.save(); rrect(ctx,x+fr,y+fr,iw,ih,fr*0.7); ctx.clip(); ctx.drawImage(cv,x+fr,y+fr,iw,ih); ctx.restore();
+  // 마커 (그림의 아래쪽 표시)
+  const mw=w*0.26, mh=Math.max(8,w*0.028), mx=x+w/2-mw/2, my=y+h+mh*0.5;
+  ctx.fillStyle='#141414'; rrect(ctx,mx,my,mw*0.3,mh,mh*0.3); ctx.fill();
+  ctx.fillStyle='#fafafa'; rrect(ctx,mx+mw*0.3,my,mw*0.6,mh,mh*0.2); ctx.fill(); ctx.strokeStyle='#bbb'; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='#1a1a1a'; rrect(ctx,mx+mw*0.9,my+mh*0.15,mw*0.1,mh*0.7,mh*0.3); ctx.fill();
+  return h+mh*2;
+}
+function woodBg(ctx,W,H){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#d6b083');g.addColorStop(1,'#c79d6c');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(120,75,35,.06)';for(let x=0;x<W;x+=23){ctx.fillRect(x,0,2,H)}}
+function pill(ctx,text,cx,y,font,bg,fg){ctx.font=font;const tw=ctx.measureText(text).width,ph=parseInt(font.match(/(\d+)px/)[1])*1.5;
+  ctx.fillStyle=bg;rrect(ctx,cx-tw/2-ph*0.45,y,tw+ph*0.9,ph,ph/2);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,cx,y+ph/2);return ph}
+// items: [{B,ink,rot,name,words:[..]|null}] → 한 장의 이미지
+async function makeImage(items,title){
+  try{await document.fonts.ready}catch(e){}
+  const n=items.length, cols=n===1?1:(n<=4?2:(n<=6?3:4)), rows=Math.ceil(n/cols);
+  const cellW=n===1?1000:(cols===2?620:cols===3?520:440), gap=40, pad=50, head=title?110:30, foot=60;
+  // 세로로 돌린 보드는 칸 폭에 맞춰 줄임
+  const bw=it=>it.rot%2 ? cellW*0.62 : cellW;
+  const bh=it=>{const w=bw(it),[vw,vh]=viewSize(it.rot);return (w-2*Math.round(w*0.035))*vh/vw+2*Math.round(w*0.035)+Math.max(8,w*0.028)*2};
+  const capH=it=>54+(it.words&&it.words.length?48:0);
+  const rowH=[];for(let r=0;r<rows;r++){let m=0;for(let c=0;c<cols;c++){const it=items[r*cols+c];if(it)m=Math.max(m,bh(it)+capH(it))}rowH.push(m)}
+  const W=pad*2+cols*cellW+(cols-1)*gap, H=head+rowH.reduce((a,b)=>a+b,0)+(rows-1)*gap+foot+pad;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
+  woodBg(ctx,W,H);
+  if(title){ctx.fillStyle='#161616';ctx.font="700 56px Gaegu, 'Gowun Dodum', sans-serif";ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(title,W/2,pad+20)}
+  let y=head;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){const it=items[r*cols+c]; if(!it) continue;
+      const w=bw(it), cx=pad+c*(cellW+gap)+cellW/2;
+      const hh=drawBoardTo(ctx,cx-w/2,y,w,it.B,it.ink,it.rot);
+      let yy=y+hh+6;
+      if(it.name) yy+=pill(ctx,it.name,cx,yy,"700 26px 'Gowun Dodum', sans-serif",'#fffdf8','#161616')+8;
+      if(it.words&&it.words.length){ctx.font="700 34px Gaegu, 'Gowun Dodum', sans-serif";const t=it.words.join(' · ');
+        pill(ctx,'🔮 '+t,cx,yy,"700 30px Gaegu, 'Gowun Dodum', sans-serif",'#161616','#fff')}
+    }
+    y+=rowH[r]+gap;
+  }
+  ctx.fillStyle='rgba(22,22,22,.55)';ctx.font="18px 'Gowun Dodum', sans-serif";ctx.textAlign='right';ctx.textBaseline='alphabetic';ctx.fillText('크라클 오라클 · made by m00n',W-pad*0.6,H-pad*0.5);
+  return cv;
+}
+function downloadCanvas(cv,name){
+  cv.toBlob(b=>{
+    if(!b){toast('이미지를 만들지 못했어요');return}
+    const url=URL.createObjectURL(b), a=document.createElement('a');
+    a.href=url; a.download=name.replace(/[\\/:*?"<>|]/g,'_')+'.png'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000); toast('💾 이미지를 저장했어요');
+  },'image/png');
+}
+const stamp=()=>{const d=new Date(),z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`};
 
 /* ---------- 그리기 컴포넌트 ---------- */
 
@@ -722,11 +782,14 @@ function startPractice(){
   $('#pCard').innerHTML=cardHTML(ci,'easy','big');
   const ctrl=mountDraw($('#pStage'),B,{side:Math.random()<.5?0:1});
   const end=Date.now()+DRAW_MS;
-  P={ctrl,iv:setInterval(()=>{const left=(end-Date.now())/1000;$('#pTimer').innerHTML=timerHTML(Math.max(0,left),120);$('#pTimer').classList.toggle('hurry',left<=20);
+  P={ctrl,ci,iv:setInterval(()=>{const left=(end-Date.now())/1000;$('#pTimer').innerHTML=timerHTML(Math.max(0,left),120);$('#pTimer').classList.toggle('hurry',left<=20);
     if(left<=0){clearInterval(P.iv);ctrl.lock();toast('⏰ 시간 끝! 오라클이 그림을 읽고 있어요…')}},250)};
 }
 $('#btnPractice').onclick=startPractice;
 $('#pNew').onclick=startPractice;
+$('#pSave').onclick=async()=>{ if(!P) return; const c=P.ctrl;
+  const cv=await makeImage([{B:c.board(),ink:c.st.ink,rot:c.st.rot,name:null,words:[EASY[P.ci]]}],'크라클 오라클');
+  downloadCanvas(cv,'크라클오라클_'+EASY[P.ci]+'_'+stamp()); };
 $('#pBack').onclick=()=>{if(P){P.ctrl.destroy();clearInterval(P.iv);P=null}show('home')};
 
 /* =========================================================
@@ -997,8 +1060,14 @@ function galleryHTMLInto(el,opts={}){
 }
 function zoomBoard(p){
   const B=genBoard(boardSeed(S.boards[p],inkSide(p))), v=INK[p]||{}, rot=v.rot||0;
+  const showWords = S.phase==='reveal'||S.phase==='end';     // 오라클 단계에서는 정답을 넣지 않음
   modal(`<div class="center"><div class="banner" style="margin-top:0">${esc(pname(p))}의 예언 그림</div><div id="zoomBox" style="display:flex;justify-content:center"></div>
-    <div class="actions"><button class="btn" onclick="closeModal()">닫기</button></div></div>`);
+    <div class="actions"><button class="btn ghost" id="zSave">💾 이미지 저장</button><button class="btn" onclick="closeModal()">닫기</button></div></div>`);
+  $('#zSave').onclick=async()=>{
+    const words=showWords?(S.hands[p]||[]).map(ci=>wordOf(ci,S.diff)):null;
+    const cv=await makeImage([{B,ink:decInk(B,v.d),rot,name:pname(p),words}],`크라클 오라클 · ${Math.min(S.round,4)}라운드`);
+    downloadCanvas(cv,`크라클오라클_${pname(p)}_R${S.round}_${stamp()}`);
+  };
   const box=$('#zoomBox'); const [vw,vh]=viewSize(rot);
   const w=Math.min(box.clientWidth-30, (window.innerHeight*0.66)*vw/vh);
   box.appendChild(boardThumb(B,decInk(B,v.d),rot,w));
@@ -1034,6 +1103,12 @@ function buildOracle(){
 }
 
 /* ---------- 공개 단계 ---------- */
+async function saveAll(){
+  const items=order().map(p=>{const B=genBoard(boardSeed(S.boards[p],inkSide(p))),v=INK[p]||{};
+    return {B,ink:decInk(B,v.d),rot:v.rot||0,name:pname(p),words:(S.hands[p]||[]).map(ci=>wordOf(ci,S.diff))}});
+  const cv=await makeImage(items,`크라클 오라클 · ${Math.min(S.round,4)}라운드 작품들`);
+  downloadCanvas(cv,`크라클오라클_R${S.round}_${stamp()}`);
+}
 function buildReveal(){
   const fl=S.flipped||{}, n=nP();
   $('#stage').innerHTML=`
@@ -1053,7 +1128,8 @@ function buildReveal(){
     wrap.innerHTML=cardHTML(c.w,S.diff,cls)+tag; cg.appendChild(wrap);
   });
   const msg = S.lost?'오류가 너무 많아요… 결과 보기':(S.over?'4라운드 완주! 결과 보기':`보드를 지우고 왼쪽으로 넘기기 ▶ 다음 라운드`);
-  $('#rAct').innerHTML=`<button class="btn pink" id="btnNext">${msg}</button>`;
+  $('#rAct').innerHTML=`<button class="btn ghost" id="btnSaveAll">🖼 모든 그림 저장</button><button class="btn pink" id="btnNext">${msg}</button>`;
+  $('#btnSaveAll').onclick=saveAll;
   $('#btnNext').onclick=nextRound;
 }
 
@@ -1065,10 +1141,10 @@ function buildEnd(){
     <div class="center" style="color:#4b3a28;font-size:16px">${win?`4라운드 동안 오류 ${S.errors}개 (허용 ${n}개) — 모두의 승리!`:`${S.round}라운드에서 오류 ${S.errors}개로 허용치 ${n}개를 넘었어요`}</div>
     <div class="banner" style="font-size:22px;margin-top:18px">마지막 라운드 작품들</div>
     <div class="gallery" id="gal"></div>
-    <div class="actions"><button class="btn" id="btnAgain">대기실로 (다시 하기)</button><button class="btn ghost" id="btnOut">나가기</button></div>
+    <div class="actions"><button class="btn ghost" id="btnSaveAll">🖼 모든 그림 저장</button><button class="btn" id="btnAgain">대기실로 (다시 하기)</button><button class="btn ghost" id="btnOut">나가기</button></div>
     <div class="foot">made by m00n</div>`;
   galleryHTMLInto($('#gal'),{words:true});
-  $('#btnAgain').onclick=backToLobby; $('#btnOut').onclick=leave;
+  $('#btnAgain').onclick=backToLobby; $('#btnOut').onclick=leave; $('#btnSaveAll').onclick=saveAll;
 }
 
 window.addEventListener('resize',()=>{if(S&&S.phase!=='draw'&&S.phase!=='lobby'){clearTimeout(render._r);render._r=setTimeout(()=>renderStage(true),200)}});
